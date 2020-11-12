@@ -3,6 +3,9 @@ name = "boilerpipe"
 version = "0.1.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 edition = "2018"
+description = "Library for text extraction from HTML documents"
+license = "MIT"
+repository = "https://github.com/0nkery/boilerpipe-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
