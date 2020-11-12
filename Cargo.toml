@@ -1,5 +1,5 @@
 [package]
-name = "boilerpipe-rs"
+name = "boilerpipe"
 version = "0.1.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 edition = "2018"
