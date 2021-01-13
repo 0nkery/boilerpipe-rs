@@ -1,6 +1,6 @@
 [package]
 name = "boilerpipe"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 edition = "2018"
 description = "Library for text extraction from HTML documents"

@@ -250,7 +250,7 @@ impl ParseState {
                 return;
             }
 
-            let num_words_in_wrapped_lines= if num_wrapped_lines == 0 {
+            let num_words_in_wrapped_lines = if num_wrapped_lines == 0 {
                 num_wrapped_lines = 1;
 
                 num_words
@@ -1103,7 +1103,7 @@ impl Document {
                 tb.is_content = true;
                 tb.add_labels(&[Label::VeryLikelyContent]);
             } else {
-                tb.is_content = Self::is_largest_block(max_num_words, tb);
+                tb.is_content = Self::is_largest_block(max_num_words, min_words, tb);
                 tb.add_labels(&[Label::MightBeContent]);
             }
         }
@@ -1111,7 +1111,7 @@ impl Document {
         if expand_to_same_level_text && n != -1 {
             for tb in self.text_blocks.iter_mut().rev() {
                 if tb.tag_level < level {
-                    break;
+                    continue;
                 } else if tb.tag_level == level {
                     if tb.num_words >= min_words {
                         tb.is_content = true;
@@ -1121,7 +1121,7 @@ impl Document {
 
             for tb in self.text_blocks.iter_mut() {
                 if tb.tag_level < level {
-                    break;
+                    continue;
                 } else if tb.tag_level == level {
                     if tb.num_words >= min_words {
                         tb.is_content = true;
@@ -1133,12 +1133,12 @@ impl Document {
         true
     }
 
-    fn is_largest_block(max_num_words: usize, tb: &TextBlock) -> bool {
+    fn is_largest_block(max_num_words: usize, min_words: usize, tb: &TextBlock) -> bool {
         let min_word_percent = match max_num_words {
             n if n >= 1000 => 0.25,
             n if n >= 500 => 0.6,
             _ => {
-                return tb.is_content && tb.num_words == max_num_words;
+                return tb.is_content && tb.num_words > min_words;
             }
         };
 
@@ -1272,7 +1272,7 @@ mod tests {
 
     #[test]
     fn test() {
-        for i in 0..9 {
+        for i in 0..10 {
             let html_file = format!("test-data/{}.html", i);
             let b64_file = format!("test-data/{}.base64", i);
 
@@ -1281,6 +1281,7 @@ mod tests {
 
             let doc = parse_document(&s);
             let content = doc.content();
+            println!("{}", content.to_string());
             let b64 = base64::encode(content.as_bytes());
 
             let base64 = std::fs::read(b64_file).unwrap();
