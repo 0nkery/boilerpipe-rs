@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, FixedOffset};
 use ego_tree::NodeRef;
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use scraper::{node::Element, Node};
 use tendril::StrTendril;
 use unicode_segmentation::UnicodeSegmentation;
@@ -88,7 +88,16 @@ impl ParseState {
             self.flush = false;
         }
 
-        self.text.push_slice(t.trim());
+        lazy_static::lazy_static! {
+            static ref JSON_REGEX: Regex = RegexBuilder::new(r#"(\[.*)?\{.*".*":(\{.*:.*\})?.*\}\]?"#)
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap();
+        };
+
+        let t = JSON_REGEX.replace_all(t.trim(), "");
+
+        self.text.push_slice(&t);
         self.text.push_char(' ');
 
         if self.block_tag_depth == -1 {
@@ -1272,7 +1281,7 @@ mod tests {
 
     #[test]
     fn test() {
-        for i in 0..10 {
+        for i in 0..=10 {
             let html_file = format!("test-data/{}.html", i);
             let b64_file = format!("test-data/{}.base64", i);
 
