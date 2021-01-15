@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use ego_tree::NodeRef;
 use regex::{Regex, RegexBuilder};
 use scraper::{node::Element, Node};
-use tendril::StrTendril;
+use tendril::{fmt, Atomic, StrTendril, Tendril};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub fn parse_document(doc: &str) -> Document {
@@ -35,7 +35,7 @@ struct ParseState {
     last_start_tag: Option<Tag>,
     in_anchor_text: bool,
     label_stack: Vec<Label>,
-    text: StrTendril,
+    text: Tendril<fmt::UTF8, Atomic>,
     title: Option<String>,
     text_blocks: Vec<TextBlock>,
     time: Option<DateTime<FixedOffset>>,
@@ -56,7 +56,7 @@ impl ParseState {
             last_start_tag: None,
             in_anchor_text: false,
             label_stack: vec![],
-            text: StrTendril::new(),
+            text: Tendril::new(),
             title: None,
             text_blocks: vec![],
             time: None,
@@ -512,7 +512,7 @@ impl Action {
 
 #[derive(Debug)]
 struct TextBlock {
-    text: StrTendril,
+    text: Tendril<fmt::UTF8, Atomic>,
     num_words: usize,
     num_linked_words: usize,
     num_words_in_wrapped_lines: usize,
@@ -546,7 +546,7 @@ impl TextBlock {
 
     fn empty_start() -> Self {
         Self {
-            text: StrTendril::new(),
+            text: Tendril::new(),
             num_words: 0,
             num_linked_words: 0,
             num_words_in_wrapped_lines: 0,
@@ -561,7 +561,7 @@ impl TextBlock {
 
     fn empty_end() -> Self {
         Self {
-            text: StrTendril::new(),
+            text: Tendril::new(),
             num_words: 0,
             num_linked_words: 0,
             num_words_in_wrapped_lines: 0,
@@ -1250,8 +1250,8 @@ impl Document {
         has_changed
     }
 
-    fn text(&self, include_content: bool, include_non_content: bool) -> StrTendril {
-        let mut text = StrTendril::new();
+    fn text(&self, include_content: bool, include_non_content: bool) -> Tendril<fmt::UTF8, Atomic> {
+        let mut text: Tendril<fmt::UTF8, Atomic> = Tendril::new();
 
         for tb in self.text_blocks.iter() {
             if tb.is_content {
@@ -1270,7 +1270,7 @@ impl Document {
         return text;
     }
 
-    pub fn content(&self) -> StrTendril {
+    pub fn content(&self) -> Tendril<fmt::UTF8, Atomic> {
         self.text(true, false)
     }
 }
