@@ -223,7 +223,19 @@ impl ParseState {
             let mut num_words_current_line = 0;
             let mut current_line_length = 0;
 
-            for word in self.text.unicode_words() {
+            lazy_static::lazy_static! {
+                static ref RE_SPACE: Regex = RegexBuilder::new(r#"[ ]+"#)
+                    .dot_matches_new_line(true)
+                    .build()
+                    .unwrap();
+                static ref RE_WORD: Regex = RegexBuilder::new(r#"[\p{L}\p{Nd}\p{Nl}\p{No}]"#)
+                    .dot_matches_new_line(true)
+                    .build()
+                    .unwrap();
+            };
+            let text = Self::tokenize(&self.text);
+
+            for word in RE_SPACE.split(&text) {
                 match word {
                     ANCHOR_TEXT_START => {
                         self.in_anchor_text = true;
@@ -231,7 +243,7 @@ impl ParseState {
                     ANCHOR_TEXT_END => {
                         self.in_anchor_text = false;
                     }
-                    word if word.chars().all(|c| c.is_alphanumeric()) => {
+                    word if RE_WORD.is_match(word) => {
                         num_tokens += 1;
                         num_words += 1;
                         num_words_current_line += 1;
@@ -296,6 +308,31 @@ impl ParseState {
             self.text.clear();
             self.block_tag_depth = -1;
         }
+    }
+
+    fn tokenize(s: &str) -> String {
+        lazy_static::lazy_static! {
+            static ref RE_WORD_BOUNDARY: Regex = RegexBuilder::new(r#"[\pN\d_]+"#)
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap();
+            static ref RE_NOT_WORD_BOUNDARY: Regex = RegexBuilder::new(r#"[\u{2063}]*([\\"'\\.,\\!\\@\\-\\:\\;\\$\\?\\(\\)/])[\u{2063}]*"#)
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap();
+            static ref RE_INVISIBLE_SEP: Regex = RegexBuilder::new("[\u{2063}]+")
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap();
+        };
+
+        let s = RE_WORD_BOUNDARY.replace_all(s.trim(), |caps: &regex::Captures| {
+            format!("\u{2063}{}\u{2063}", &caps[0])
+        });
+        let s = RE_NOT_WORD_BOUNDARY.replace_all(&s, "$1");
+        let s = RE_INVISIBLE_SEP.replace_all(&s, " ");
+
+        s.trim().to_owned()
     }
 }
 
@@ -1112,7 +1149,7 @@ impl Document {
                 tb.is_content = true;
                 tb.add_labels(&[Label::VeryLikelyContent]);
             } else {
-                tb.is_content = Self::is_largest_block(max_num_words, min_words, tb);
+                tb.is_content = Self::is_largest_block(max_num_words, tb);
                 tb.add_labels(&[Label::MightBeContent]);
             }
         }
@@ -1120,7 +1157,7 @@ impl Document {
         if expand_to_same_level_text && n != -1 {
             for tb in self.text_blocks.iter_mut().rev() {
                 if tb.tag_level < level {
-                    continue;
+                    break;
                 } else if tb.tag_level == level {
                     if tb.num_words >= min_words {
                         tb.is_content = true;
@@ -1130,7 +1167,7 @@ impl Document {
 
             for tb in self.text_blocks.iter_mut() {
                 if tb.tag_level < level {
-                    continue;
+                    break;
                 } else if tb.tag_level == level {
                     if tb.num_words >= min_words {
                         tb.is_content = true;
@@ -1142,12 +1179,12 @@ impl Document {
         true
     }
 
-    fn is_largest_block(max_num_words: usize, min_words: usize, tb: &TextBlock) -> bool {
+    fn is_largest_block(max_num_words: usize, tb: &TextBlock) -> bool {
         let min_word_percent = match max_num_words {
             n if n >= 1000 => 0.25,
             n if n >= 500 => 0.6,
             _ => {
-                return tb.is_content && tb.num_words > min_words;
+                return tb.is_content && tb.num_words == max_num_words;
             }
         };
 
@@ -1281,7 +1318,7 @@ mod tests {
 
     #[test]
     fn test() {
-        for i in 0..=10 {
+        for i in 0..=12 {
             let html_file = format!("test-data/{}.html", i);
             let b64_file = format!("test-data/{}.base64", i);
 
