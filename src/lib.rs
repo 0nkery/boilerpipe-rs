@@ -139,9 +139,12 @@ impl ParseState {
                 self.label_stack.extend_from_slice(labels);
             }
             Action::Time => {
-                self.time = el
-                    .attr("datetime")
-                    .and_then(|dt| DateTime::parse_from_rfc3339(dt).ok());
+                self.time = match self.time.take() {
+                    Some(t) => Some(t),
+                    None => el
+                        .attr("datetime")
+                        .and_then(|dt| DateTime::parse_from_rfc3339(dt).ok()),
+                };
             }
             _ => {}
         }
