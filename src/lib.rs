@@ -45,6 +45,9 @@ const ANCHOR_TEXT_START: &'static str = "$\u{e00a}<";
 const ANCHOR_TEXT_END: &'static str = ">\u{e00a}$";
 const MAX_LINE_LENGTH: usize = 80;
 
+const PROGRAMMING_LANGUAGE_WORDS: &[&'static str] =
+    &["string", "array", "bool", "false", "true", "int"];
+
 impl ParseState {
     fn new() -> Self {
         Self {
@@ -96,6 +99,24 @@ impl ParseState {
         };
 
         let t = JSON_REGEX.replace_all(t.trim(), "");
+
+        let has_some_pl_words = PROGRAMMING_LANGUAGE_WORDS.iter().any(|w| t.contains(w));
+
+        if has_some_pl_words {
+            let mut total_words = 0;
+            let mut pl_words = 0;
+            for word in t.unicode_words() {
+                total_words += 1;
+                if PROGRAMMING_LANGUAGE_WORDS.contains(&word) {
+                    pl_words += 1;
+                }
+            }
+
+            if (pl_words as f64) / (total_words as f64) >= 0.1 {
+                // ignore this text chunk since it seems like it is some programming language
+                return;
+            }
+        }
 
         self.text.push_slice(&t);
         self.text.push_char(' ');
@@ -1321,7 +1342,7 @@ mod tests {
 
     #[test]
     fn test() {
-        for i in 0..=12 {
+        for i in 0..=13 {
             let html_file = format!("test-data/{}.html", i);
             let b64_file = format!("test-data/{}.base64", i);
 
@@ -1335,6 +1356,13 @@ mod tests {
 
             let base64 = std::fs::read(b64_file).unwrap();
             let expected_base64 = String::from_utf8(base64).unwrap();
+
+            let expected_content = base64::decode(&expected_base64).unwrap();
+            if expected_base64 != b64 {
+                println!("----");
+                let expected_content = String::from_utf8(expected_content).unwrap();
+                println!("{}", expected_content);
+            }
 
             println!("{:?}", doc.title);
             println!("{:?}", doc.time);
