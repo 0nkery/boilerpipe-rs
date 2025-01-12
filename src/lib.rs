@@ -838,7 +838,7 @@ impl Document {
             let text = text.replace("'", "");
             let text = text.trim().to_lowercase();
 
-            if potential_titles.contains_key(text.as_str().into()) {
+            if potential_titles.contains_key(text.as_str()) {
                 tb.add_labels(&[Label::Title]);
                 has_changed = true;
                 break;
